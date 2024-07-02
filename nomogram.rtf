@@ -1,0 +1,69 @@
+{\rtf1\ansi\ansicpg936\cocoartf2708
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 rm(list = ls())\
+library(survival)\
+library(rms) \
+library(foreign) \
+cup_csv <- read.csv("~/Documents/R Files/R files/ICI(58 patients)-nomogram.csv")\
+head(cup_csv)\
+cup_csv$ECOG <- factor(cup_csv$ECOG, levels = c(0,1), labels = c("0", "\uc0\u8805 1"))\
+cup_csv$BMI <- factor(cup_csv$BMI, levels = c(1,2), labels = c("normal", "unnormal"))\
+cup_csv$ICIslines <- factor(cup_csv$ICIsline, levels = c(0,1), labels = c("\uc0\u8804 2 lines", "\u8805 3 lines"))\
+cup_csv$PLR <- factor(cup_csv$PLR, levels = c(1,2), labels = c("low", "high"))\
+str(cup_csv)\
+\
+dd=datadist(cup_csv)\
+options(datadist="dd")\
+\
+f_ECOG <- cph(Surv(PFSday, status) ~ ECOG, x = T, y = T, surv = T, data = cup_csv) \
+f_ECOG\
+f_BMI <- cph(Surv(PFSday, status) ~ BMI, x = T, y = T, surv = T, data = cup_csv) \
+f_BMI\
+f_ICIslines <- cph(Surv(PFSday, status) ~ ICIslines, x = T, y = T, surv = T, data = cup_csv) \
+f_ICIslines\
+f_PLR <- cph(Surv(PFSday, status) ~ PLR, x = T, y = T, surv = T, data = cup_csv) \
+f_PLR\
+\
+f2 <- cph(Surv(PFSday, status) ~ ECOG + BMI + ICIslines + PLR, x = T, y = T, surv = T, data = cup_csv) \
+f2\
+\
+\
+sur <- Survival(f2)\
+sur1 <- function(x) sur(90, x)\
+sur2 <- function(x) sur(180, x)\
+sur3 <- function(x) sur(360, x)\
+\
+nom <- nomogram(f2,\
+                fun = list(sur1, sur2, sur3),\
+                fun.at = c(0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1),\
+                funlabel = c("3 months survival", "6 months survival", "1 year survival"))\
+plot(nom)\
+\
+\
+# Calibration Curve\
+\
+f2 <- cph(Surv(PFSday, status) ~ ECOG + BMI + ICIslines + PLR, x = T, y = T, surv = T, data = cup_csv, time.inc = 90)\
+cal1 <- calibrate(f2, \
+                  cmethod = 'KM',   \
+                  method = "boot",  \
+                  u = 90,        \
+                  m = 16,        \
+                  B = 1000)      \
+\
+par(mar = c(6, 6, 3, 3))            \
+plot(cal1,                         \
+     lwd=1,                         \
+     lty=1,                       \
+     conf.int=T,                    \
+     errbar.col="blue3",           \
+     col="red3",                   \
+     xlim=c(0,1),                 \
+     ylim=c(0,1),                  \
+     xlab="Nomogram-Predicted Probability of 1-Year PFS",  \
+     ylab="Actual 1-Year PFS (proportion)",               \
+     subtitles = F)                 }
